@@ -1,0 +1,8 @@
+spring:
+  application:
+    name: backend
+  
+  security:
+    jwt:
+      key: 2837452984690238475628394756203847562038475
+      expire-hours: 168
