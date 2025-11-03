@@ -1,6 +1,3 @@
-import org.gradle.api.tasks.testing.Test
-import org.gradle.jvm.toolchain.JavaLanguageVersion
-
 plugins {
     kotlin("jvm") version "1.9.25"
     kotlin("plugin.spring") version "1.9.25"
@@ -31,6 +28,7 @@ repositories {
 dependencies {
     implementation("org.springframework.boot:spring-boot-starter-security")
     implementation("org.springframework.boot:spring-boot-starter-web")
+    implementation("com.alibaba.fastjson2:fastjson2:2.0.32")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
     compileOnly("org.projectlombok:lombok")
