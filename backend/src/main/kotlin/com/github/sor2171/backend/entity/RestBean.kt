@@ -19,9 +19,7 @@ data class RestBean<T>(
             return RestBean(code, data, message ?: "Failure")
         }
 
-        fun unauthenticated(message: String?) = failure(401, null, message)
-        
-        fun forbidden(message: String?) = failure(403, null, message)
+        fun failure(message: String?): RestBean<String?> = failure(401, null, message)
     }
 
     fun toJsonString(): String = JSONObject.toJSONString(
