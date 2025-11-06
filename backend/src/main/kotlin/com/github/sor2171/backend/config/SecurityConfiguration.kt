@@ -3,6 +3,7 @@ package com.github.sor2171.backend.config
 import com.github.sor2171.backend.entity.RestBean
 import com.github.sor2171.backend.entity.vo.response.AuthorizeVO
 import com.github.sor2171.backend.filter.JwtAuthorizeFilter
+import com.github.sor2171.backend.service.AccountService
 import com.github.sor2171.backend.utils.JwtUtils
 import jakarta.annotation.Resource
 import jakarta.servlet.http.HttpServletRequest
@@ -25,7 +26,10 @@ class SecurityConfiguration(
     val utils: JwtUtils,
 
     @Resource
-    val jwtAuthorizeFilter: JwtAuthorizeFilter
+    val jwtAuthorizeFilter: JwtAuthorizeFilter,
+    
+    @Resource
+    val service: AccountService,
 ) {
     @Bean
     fun filterChain(http: HttpSecurity): SecurityFilterChain {
@@ -64,13 +68,14 @@ class SecurityConfiguration(
             response.contentType = "application/json;charset=UTF-8"
 
             val user = authentication.principal as UserDetails
+            val account = service.findAccountByNameOrEmail(user.username)!!
             val vo = AuthorizeVO(
-                "abc123",
-                "USER",
+                account.username,
+                account.role,
                 utils.createJwt(
                     user,
-                    1,
-                    "abc123"
+                    account.id,
+                    account.username
                 ),
                 utils.expiresTime()
             )
