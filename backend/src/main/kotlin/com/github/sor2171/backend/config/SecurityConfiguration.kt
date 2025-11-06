@@ -9,6 +9,7 @@ import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import org.springframework.http.HttpHeaders
 import org.springframework.security.access.AccessDeniedException
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
 import org.springframework.security.config.http.SessionCreationPolicy
@@ -96,7 +97,13 @@ class SecurityConfiguration(
     val logoutSuccessHandler =
         { request: HttpServletRequest,
           response: HttpServletResponse,
-          authentication: Authentication ->
+          authentication: Authentication? ->
+            response.contentType = "application/json;charset=UTF-8"
+            val writer = response.writer
+            val authorization = request.getHeader(HttpHeaders.AUTHORIZATION)
+            if (utils.invalidateJwt(authorization)) 
+                writer.write(RestBean.success().toJsonString())
+            else writer.write(RestBean.logoutFailed().toJsonString())
         }
 
     val unauthenticatedHandler =

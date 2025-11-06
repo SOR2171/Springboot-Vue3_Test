@@ -13,19 +13,25 @@ data class RestBean<T>(
             return RestBean(200, data, message)
         }
 
-        fun success(): RestBean<String?> = success(null)
+        fun success(): RestBean<String?> =
+            success(null)
 
         fun <T> failure(code: Int = 401, data: T, message: String?): RestBean<T> {
             return RestBean(code, data, message ?: "Failure")
         }
 
-        fun unauthenticated(message: String?) = failure(401, null, message)
-        
-        fun forbidden(message: String?) = failure(403, null, message)
+        fun unauthenticated(message: String?) =
+            failure(401, null, message)
+
+        fun forbidden(message: String?) =
+            failure(403, null, message)
+
+        fun logoutFailed(message: String = ""): RestBean<String?> {
+            val formatMessage = if (message.isBlank()) "" else ": $message"
+            return failure(400, null, "Logout Failed$formatMessage")
+        }
     }
 
-    fun toJsonString(): String = JSONObject.toJSONString(
-        this,
-        JSONWriter.Feature.WriteNulls
-    )
+    fun toJsonString(): String =
+        JSONObject.toJSONString(this, JSONWriter.Feature.WriteNulls)
 }
