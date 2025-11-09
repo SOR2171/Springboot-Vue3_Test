@@ -2,6 +2,7 @@
 import {reactive, ref} from "vue";
 import {Lock, User} from "@element-plus/icons-vue";
 import {login} from "../../net/index.js";
+import router from "../../router/index.js";
 
 const formRef = ref()
 
@@ -20,10 +21,10 @@ const formRule = {
   ]
 }
 
-const userLogin = () => {
+function userLogin() {
   formRef.value.validate((valid) => {
     if (valid) {
-      login(form.username, form.password, form.remember, () => {})
+      login(form.username, form.password, form.remember, () => router.push('/index'))
     } else {
       console.log('error submit!')
       return false
@@ -76,7 +77,7 @@ const userLogin = () => {
       </el-form>
     </div>
     <div style="margin-top: 24px">
-      <el-button @click="userLogin()" style="width: 280px" type="primary">
+      <el-button @click="userLogin" style="width: 280px" type="primary">
         Sign in
       </el-button>
     </div>

@@ -44,6 +44,13 @@ function deleteAccessToken() {
     sessionStorage.removeItem(authItemName)
 }
 
+function accessHeader() {
+    const token = takeAccessToken()
+    return token ? {
+        'Authorization': 'Bearer ' + token
+    } : {}
+}
+
 function internalPost(url, data, header, success, failure = defaultFailure, error = defaultError) {
     axios.post(url, data, { headers: header }).then(({ data }) => {
         if (data.code === 200) {
@@ -64,6 +71,14 @@ function internalGet(url, header, success, failure = defaultFailure, error = def
     }).catch(err => error(err))
 }
 
+function get(url, success, failure = defaultFailure, error = defaultError) {
+    internalGet(url, accessHeader(), success, failure, error)
+}
+
+function post(url, data, success, failure = defaultFailure, error = defaultError) {
+    internalPost(url, data, accessHeader(), success, failure, error)
+}
+
 function login(username, password, remember, success) {
     internalPost(
         '/api/auth/login',
@@ -72,7 +87,6 @@ function login(username, password, remember, success) {
             password: password
         }, {
             'Content-Type': 'application/x-www-form-urlencoded'
-
         },
         (data) => {
             storeAccessToken(data.token, remember, data.expire)
@@ -82,4 +96,16 @@ function login(username, password, remember, success) {
     )
 }
 
-export {login}
+function logout(success, failure = defaultFailure) {
+    get(
+        '/api/auth/logout',
+        () => {
+            deleteAccessToken()
+            ElMessage.success('Logout successfully!')
+            success()
+        },
+        failure
+    )
+}
+
+export {get, post, login, logout}
