@@ -35,6 +35,7 @@ function storeAccessToken(token, remember, expire) {
         localStorage.setItem(authItemName, authString)
     } else {
         sessionStorage.setItem(authItemName, authString)
+        localStorage.removeItem(authItemName)
     }
 }
 
