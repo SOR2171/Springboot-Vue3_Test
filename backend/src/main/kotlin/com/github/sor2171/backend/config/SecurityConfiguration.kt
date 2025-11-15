@@ -36,7 +36,7 @@ class SecurityConfiguration(
         return http
             .authorizeHttpRequests {
                 it
-                    .requestMatchers("/api/auth/**").permitAll()
+                    .requestMatchers("/api/auth/**", "/error").permitAll()
                     .anyRequest().authenticated()
             }
             .formLogin {
