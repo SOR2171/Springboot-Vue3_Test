@@ -7,16 +7,10 @@ import jakarta.annotation.Resource
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.validation.Valid
 import jakarta.validation.constraints.Email
+import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.Pattern
-import org.apache.logging.log4j.util.Supplier
-import org.springframework.http.ResponseEntity
 import org.springframework.validation.annotation.Validated
-import org.springframework.web.bind.annotation.GetMapping
-import org.springframework.web.bind.annotation.PostMapping
-import org.springframework.web.bind.annotation.RequestBody
-import org.springframework.web.bind.annotation.RequestMapping
-import org.springframework.web.bind.annotation.RequestParam
-import org.springframework.web.bind.annotation.RestController
+import org.springframework.web.bind.annotation.*
 
 @Validated
 @RestController
@@ -28,19 +22,18 @@ class AuthorizeController(
 
     @GetMapping("/ask-code")
     fun askVerifyCode(
-        @RequestParam @Email email: String,
+        @RequestParam @NotBlank @Email email: String,
         @RequestParam @Pattern(regexp = "(register|reset)") type: String,
         request: HttpServletRequest
     ): RestBean<out String?> {
         return this.messageHandler(
             service
                 .registerEmailVerifyCode(
-                type,
-                email,
-                request.remoteAddr
-            )
+                    type,
+                    email,
+                    request.remoteAddr
+                )
         )
-
     }
 
     @PostMapping("/register")
