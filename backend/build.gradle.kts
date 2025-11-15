@@ -28,7 +28,9 @@ repositories {
 dependencies {
     implementation("com.auth0:java-jwt:4.4.0")
     implementation("com.baomidou:mybatis-plus-spring-boot3-starter:3.5.14")
+    implementation("org.springframework.boot:spring-boot-starter-amqp")
     implementation("org.springframework.boot:spring-boot-starter-data-redis")
+    implementation("org.springframework.boot:spring-boot-starter-mail")
     implementation("org.springframework.boot:spring-boot-starter-security")
     implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("com.alibaba.fastjson2:fastjson2:2.0.32")

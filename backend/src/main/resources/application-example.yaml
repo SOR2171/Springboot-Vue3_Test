@@ -1,0 +1,32 @@
+spring:
+  mail:
+    #host: smtp.example.com
+    #username: 123456@example.com
+    #password: password
+    #port: 123456
+    protocol: smtp
+    properties:
+      mail.smtp.auth: true
+      mail.smtp.ssl.enable: true
+      mail.smtp.timeout: 5000
+  
+  rabbitmq:
+    host: localhost
+    port: 5672
+    virtual-host: /
+    #username: admin
+    #password: 123456
+  
+  application:
+    name: backend
+  
+  security:
+    jwt:
+      #key: 123456
+      expire-hours: 168
+  
+  datasource:
+    url: jdbc:mysql://localhost:3306/kotlin_springboot
+    #username: root
+    #password: 123456
+    driver-class-name: com.mysql.cj.jdbc.Driver
