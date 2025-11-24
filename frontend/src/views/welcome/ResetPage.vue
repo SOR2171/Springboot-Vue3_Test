@@ -1,7 +1,7 @@
 <script setup>
 import {reactive, ref} from "vue";
 import {Bell, Lock, Message} from "@element-plus/icons-vue";
-import {get} from "../../net/index.js";
+import {get, post} from "../../net/index.js";
 import {ElMessage} from "element-plus";
 import router from "../../router/index.js";
 
@@ -77,7 +77,24 @@ function askCode() {
 }
 
 function resetPassword() {
-
+  formRef.value.validate(
+      (valid) => {
+        if (valid) {
+          post(
+              '/api/auth/reset',
+              { ...form },
+              () => {
+                ElMessage.success('Reset successfully!')
+                router.push('/')
+              },
+              (err) => {
+                ElMessage.error('Please check your information and try again.')
+                console.log(err)
+              }
+          )
+        }
+      }
+  )
 }
 </script>
 
@@ -169,9 +186,11 @@ function resetPassword() {
         Reset
       </el-button>
     </div>
+    
     <el-divider>
       <span style="font-size: 10px;color: slategray">Wanna go back?</span>
     </el-divider>
+    
     <div style="margin-top: 16px" v-if="activeStep === 0">
       <el-button @click="router.push('/')" style="width: 280px" type="default">
         Sign in

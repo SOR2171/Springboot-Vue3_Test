@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl
 import com.github.sor2171.backend.entity.dto.Account
 import com.github.sor2171.backend.entity.vo.request.EmailRegisterVO
+import com.github.sor2171.backend.entity.vo.request.PasswordResetVO
 import com.github.sor2171.backend.mapper.AccountMapper
 import com.github.sor2171.backend.service.AccountService
 import com.github.sor2171.backend.utils.Const
@@ -29,10 +30,10 @@ class AccountServiceImpl(
 
     @Resource
     val stringRedisTemplate: StringRedisTemplate,
-    
+
     @Resource
     val encoder: PasswordEncoder
-    
+
 ) : ServiceImpl<AccountMapper, Account>(), AccountService {
 
     override fun loadUserByUsername(username: String?): UserDetails? {
@@ -53,7 +54,7 @@ class AccountServiceImpl(
             .one()
     }
 
-    override fun registerEmailVerifyCode(type: String, email: String, ip: String): String {
+    override fun askEmailVerifyCode(type: String, email: String, ip: String): String {
         synchronized(ip.intern()) {
             if (this.verifyLimit(ip)) {
                 val code = (100000..999999).random().toString()
@@ -79,16 +80,15 @@ class AccountServiceImpl(
     }
 
     override fun registerEmailAccount(vo: EmailRegisterVO): String {
-        val (email, _, username, password) = vo
-        val code = stringRedisTemplate
-            .opsForValue()
-            .get(Const.VERIFY_EMAIL_DATA + email)
-        
-        if (code == null) return "verify code has not been sent"
-        if (code != vo.code) return "verify code is wrong."
+        val (email, code, username, password) = vo
+
+        verifyCode(email, code).also {
+            if (it != null) return it
+        }
+
         if (this.existAccountByEmail(email)) return "account with the same email already exists."
         if (this.existAccountByUsername(username)) return "username already exists."
-        
+
         val encodedPassword = encoder.encode(password)
         val account = Account(
             null,
@@ -98,8 +98,33 @@ class AccountServiceImpl(
             "user",
             Date()
         )
-        
+
         if (this.save(account)) {
+            stringRedisTemplate.delete(Const.VERIFY_EMAIL_DATA + email)
+            return ""
+        } else {
+            return "something went wrong. Please contact the administrator."
+        }
+    }
+
+    override fun resetEmailAccountPassword(vo: PasswordResetVO): String {
+        val (email, code, password) = vo
+
+        verifyCode(email, code).also {
+            if (it != null) return it
+        }
+
+        if (!existAccountByEmail(email))
+            return "account with the email does not exist."
+
+        val encodedPassword = encoder.encode(password)
+
+        val update = this.update()
+            .eq("email", email)
+            .set("password", Const.ENCODER_PREFIX + encodedPassword)
+            .update()
+
+        if (update) {
             stringRedisTemplate.delete(Const.VERIFY_EMAIL_DATA + email)
             return ""
         } else {
@@ -126,5 +151,15 @@ class AccountServiceImpl(
     private fun verifyLimit(ip: String): Boolean {
         val key = Const.VERIFY_EMAIL_LIMIT + ip
         return utils.limitOnceCheck(key, 60)
+    }
+
+    private fun verifyCode(email: String, receivedCode: String?): String? {
+        val code = stringRedisTemplate
+            .opsForValue()
+            .get(Const.VERIFY_EMAIL_DATA + email)
+
+        if (code == null) return "verify code has not been sent"
+        if (receivedCode == null || code != receivedCode) return "verify code is wrong."
+        return null
     }
 }

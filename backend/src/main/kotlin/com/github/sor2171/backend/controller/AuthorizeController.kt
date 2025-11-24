@@ -2,6 +2,7 @@ package com.github.sor2171.backend.controller
 
 import com.github.sor2171.backend.entity.RestBean
 import com.github.sor2171.backend.entity.vo.request.EmailRegisterVO
+import com.github.sor2171.backend.entity.vo.request.PasswordResetVO
 import com.github.sor2171.backend.service.AccountService
 import jakarta.annotation.Resource
 import jakarta.servlet.http.HttpServletRequest
@@ -27,18 +28,22 @@ class AuthorizeController(
         request: HttpServletRequest
     ): RestBean<out String?> {
         return this.messageHandler(
-            service
-                .registerEmailVerifyCode(
-                    type,
-                    email,
-                    request.remoteAddr
-                )
+            service.askEmailVerifyCode(
+                type,
+                email,
+                request.remoteAddr
+            )
         )
     }
 
     @PostMapping("/register")
     fun emailRegister(@RequestBody @Valid vo: EmailRegisterVO): RestBean<out String?> {
         return this.messageHandler(service.registerEmailAccount(vo))
+    }
+
+    @PostMapping("/reset")
+    fun emailResetPassword(@RequestBody @Valid vo: PasswordResetVO): RestBean<out String?> {
+        return this.messageHandler(service.resetEmailAccountPassword(vo))
     }
 
     fun messageHandler(wrongMessage: String): RestBean<out String?> {
