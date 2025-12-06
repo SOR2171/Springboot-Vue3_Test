@@ -5,130 +5,137 @@ import com.github.sor2171.backend.entity.vo.response.AuthorizeVO
 import com.github.sor2171.backend.filter.JwtAuthorizeFilter
 import com.github.sor2171.backend.service.AccountService
 import com.github.sor2171.backend.utils.JwtUtils
-import jakarta.annotation.Resource
-import jakarta.servlet.http.HttpServletRequest
-import jakarta.servlet.http.HttpServletResponse
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
-import org.springframework.http.HttpHeaders
-import org.springframework.security.access.AccessDeniedException
-import org.springframework.security.config.annotation.web.builders.HttpSecurity
-import org.springframework.security.config.http.SessionCreationPolicy
-import org.springframework.security.core.Authentication
-import org.springframework.security.core.AuthenticationException
-import org.springframework.security.core.userdetails.UserDetails
-import org.springframework.security.web.SecurityFilterChain
-import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter
+import org.springframework.http.HttpStatus
+import org.springframework.http.MediaType
+import org.springframework.security.authentication.ReactiveAuthenticationManager
+import org.springframework.security.authentication.UserDetailsRepositoryReactiveAuthenticationManager
+import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity
+import org.springframework.security.config.web.server.SecurityWebFiltersOrder
+import org.springframework.security.config.web.server.ServerHttpSecurity
+import org.springframework.security.crypto.password.PasswordEncoder
+import org.springframework.security.web.server.SecurityWebFilterChain
+import org.springframework.security.web.server.authentication.AuthenticationWebFilter
+import org.springframework.security.web.server.authentication.ServerAuthenticationConverter
+import org.springframework.security.web.server.context.NoOpServerSecurityContextRepository
+import org.springframework.security.web.server.util.matcher.ServerWebExchangeMatchers
+import org.springframework.web.server.ServerWebExchange
+import reactor.core.publisher.Mono
 
 @Configuration
+@EnableWebFluxSecurity
 class SecurityConfiguration(
-    @Resource
-    val utils: JwtUtils,
-
-    @Resource
-    val jwtAuthorizeFilter: JwtAuthorizeFilter,
-
-    @Resource
-    val service: AccountService,
+    private val utils: JwtUtils,
+    private val service: AccountService,
+    private val jwtAuthorizeFilter: JwtAuthorizeFilter,
+    private val passwordEncoder: PasswordEncoder
 ) {
+
     @Bean
-    fun filterChain(http: HttpSecurity): SecurityFilterChain {
+    fun reactiveAuthenticationManager(): ReactiveAuthenticationManager {
+        val manager = UserDetailsRepositoryReactiveAuthenticationManager(service)
+        manager.setPasswordEncoder(passwordEncoder)
+        return manager
+    }
+
+    @Bean
+    fun securityWebFilterChain(http: ServerHttpSecurity): SecurityWebFilterChain {
         return http
-            .authorizeHttpRequests {
+            .authorizeExchange {
                 it
-                    .requestMatchers("/api/auth/**", "/error").permitAll()
-                    .anyRequest().authenticated()
+                    .pathMatchers(
+                        "/api/auth/**",
+                        "/error"
+                    ).permitAll()
+                    .anyExchange().authenticated()
             }
-            .formLogin {
-                it
-                    .loginProcessingUrl("/api/auth/login")
-                    .failureHandler(authenticationFailureHandler)
-                    .successHandler(authenticationSuccessHandler)
-            }
-            .logout {
-                it
-                    .logoutUrl("/api/auth/logout")
-                    .logoutSuccessHandler(logoutSuccessHandler)
-            }
+            .addFilterAt(loginAuthenticationFilter(), SecurityWebFiltersOrder.AUTHENTICATION)
+            .addFilterAt(jwtAuthorizeFilter, SecurityWebFiltersOrder.AUTHENTICATION)
             .exceptionHandling {
-                it
-                    .authenticationEntryPoint(unauthenticatedHandler)
-                    .accessDeniedHandler(accessDeniedHandler)
+                it.authenticationEntryPoint { exchange, ex ->
+                    writeJsonResponse(
+                        exchange,
+                        HttpStatus.UNAUTHORIZED,
+                        RestBean.unauthenticated(ex.message)
+                    )
+                }
+                    .accessDeniedHandler { exchange, ex ->
+                        writeJsonResponse(
+                            exchange,
+                            HttpStatus.FORBIDDEN,
+                            RestBean.forbidden(ex.message)
+                        )
+                    }
             }
             .csrf { it.disable() }
-            .sessionManagement { it.sessionCreationPolicy(SessionCreationPolicy.STATELESS) }
-            .addFilterBefore(jwtAuthorizeFilter, UsernamePasswordAuthenticationFilter::class.java)
+            .securityContextRepository(NoOpServerSecurityContextRepository.getInstance())
             .build()
     }
 
-    val authenticationSuccessHandler =
-        { request: HttpServletRequest,
-          response: HttpServletResponse,
-          authentication: Authentication ->
-            response.contentType = "application/json;charset=UTF-8"
-
-            val user = authentication.principal as UserDetails
-            val account = service.findAccountByNameOrEmail(user.username)!!
-            val vo = account.toViewObject(
-                AuthorizeVO::class,
-                mapOf(
-                    "token" to utils.createJwt(user, account.id!!, account.username),
-                    "expire" to utils.expiresTime()
-                )
-            )
-
-            response.writer.write(
-                RestBean
-                    .success(vo)
-                    .toJsonString()
-            )
+    @Bean
+    fun loginAuthenticationFilter(): AuthenticationWebFilter {
+        val filter = AuthenticationWebFilter(reactiveAuthenticationManager())
+        filter.setRequiresAuthenticationMatcher(
+            ServerWebExchangeMatchers.pathMatchers("/api/auth/login")
+        )
+        filter.setServerAuthenticationConverter(loginAuthenticationConverter())
+        filter.setAuthenticationSuccessHandler { webFilterExchange, authentication ->
+            val user = authentication.principal as org.springframework.security.core.userdetails.User
+            service.findAccountByNameOrEmail(user.username)
+                .flatMap { account ->
+                    val vo = account.toAnotherObject(
+                        AuthorizeVO::class,
+                        mapOf(
+                            "token" to utils.createJwt(user, account.id!!, account.username),
+                            "expire" to utils.expiresTime()
+                        )
+                    )
+                    writeJsonResponse(
+                        webFilterExchange.exchange,
+                        HttpStatus.OK,
+                        RestBean.success(vo)
+                    )
+                }
         }
-
-    val authenticationFailureHandler =
-        { request: HttpServletRequest,
-          response: HttpServletResponse,
-          exception: Exception ->
-            response.contentType = "application/json;charset=UTF-8"
-            response.writer.write(
-                RestBean
-                    .unauthenticated(exception.message)
-                    .toJsonString()
+        filter.setAuthenticationFailureHandler { webFilterExchange, exception ->
+            writeJsonResponse(
+                webFilterExchange.exchange,
+                HttpStatus.UNAUTHORIZED,
+                RestBean.unauthenticated(exception.message)
             )
         }
+        return filter
+    }
 
-    val logoutSuccessHandler =
-        { request: HttpServletRequest,
-          response: HttpServletResponse,
-          authentication: Authentication? ->
-            response.contentType = "application/json;charset=UTF-8"
-            val writer = response.writer
-            val authorization = request.getHeader(HttpHeaders.AUTHORIZATION)
-            if (utils.invalidateJwt(authorization))
-                writer.write(RestBean.success().toJsonString())
-            else writer.write(RestBean.logoutFailed().toJsonString())
+    private fun loginAuthenticationConverter(): ServerAuthenticationConverter {
+        return ServerAuthenticationConverter { exchange ->
+            exchange.formData.flatMap { formData ->
+                val username = formData.getFirst("username")
+                val password = formData.getFirst("password")
+                if (username != null && password != null) {
+                    Mono.just(
+                        org.springframework.security.authentication.UsernamePasswordAuthenticationToken(
+                            username,
+                            password
+                        )
+                    )
+                } else {
+                    Mono.empty()
+                }
+            }
         }
+    }
 
-    val unauthenticatedHandler =
-        { request: HttpServletRequest,
-          response: HttpServletResponse,
-          authException: AuthenticationException ->
-            response.contentType = "application/json;charset=UTF-8"
-            response.writer.write(
-                RestBean
-                    .unauthenticated(authException.message)
-                    .toJsonString()
-            )
-        }
-
-    val accessDeniedHandler =
-        { request: HttpServletRequest,
-          response: HttpServletResponse,
-          accessDeniedException: AccessDeniedException ->
-            response.contentType = "application/json;charset=UTF-8"
-            response.writer.write(
-                RestBean
-                    .forbidden(accessDeniedException.message)
-                    .toJsonString()
-            )
-        }
+    private fun writeJsonResponse(
+        exchange: ServerWebExchange,
+        status: HttpStatus,
+        body: RestBean<*>
+    ): Mono<Void> {
+        val response = exchange.response
+        response.statusCode = status
+        response.headers.contentType = MediaType.APPLICATION_JSON
+        val buffer = response.bufferFactory().wrap(body.toJsonString().toByteArray())
+        return response.writeWith(Mono.just(buffer))
+    }
 }

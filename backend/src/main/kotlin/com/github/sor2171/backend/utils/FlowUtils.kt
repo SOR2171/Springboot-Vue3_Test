@@ -1,27 +1,26 @@
 package com.github.sor2171.backend.utils
 
 import jakarta.annotation.Resource
-import org.springframework.data.redis.core.StringRedisTemplate
+import org.springframework.data.redis.core.ReactiveStringRedisTemplate
 import org.springframework.stereotype.Component
-import java.util.concurrent.TimeUnit
+import reactor.core.publisher.Mono
+import java.time.Duration
 
 @Component
 class FlowUtils(
     @Resource
-    val template: StringRedisTemplate
+    val template: ReactiveStringRedisTemplate
 ) {
-    
-    fun limitOnceCheck(key: String, blockTime: Int): Boolean {
-        if (template.hasKey(key)) {
-            return false
-        } else {
-            template.opsForValue().set(
-                key,
-                "",
-                blockTime.toLong(),
-                TimeUnit.SECONDS
-            )
-            return true
+
+    fun limitOnceCheck(key: String, blockTime: Int): Mono<Boolean> {
+        return template.hasKey(key).flatMap { exists ->
+            if (exists) {
+                Mono.just(false)
+            } else {
+                template.opsForValue()
+                    .set(key, "", Duration.ofSeconds(blockTime.toLong()))
+                    .thenReturn(true)
+            }
         }
     }
 }

@@ -2,61 +2,69 @@ package com.github.sor2171.backend.filter
 
 import com.github.sor2171.backend.entity.RestBean
 import com.github.sor2171.backend.utils.Const
-import jakarta.annotation.Resource
-import jakarta.servlet.FilterChain
-import jakarta.servlet.ServletRequest
-import jakarta.servlet.ServletResponse
-import jakarta.servlet.http.HttpFilter
 import org.springframework.core.annotation.Order
-import org.springframework.data.redis.core.StringRedisTemplate
+import org.springframework.data.redis.core.ReactiveStringRedisTemplate
+import org.springframework.http.HttpStatus
+import org.springframework.http.MediaType
 import org.springframework.stereotype.Component
-import java.util.concurrent.TimeUnit
+import org.springframework.web.server.ServerWebExchange
+import org.springframework.web.server.WebFilter
+import org.springframework.web.server.WebFilterChain
+import reactor.core.publisher.Mono
+import java.time.Duration
 
 @Component
 @Order(Const.FLOW_LIMIT_ORDER)
-class FlowLimitFilter : HttpFilter() {
+class FlowLimitFilter(
+    private val template: ReactiveStringRedisTemplate
+) : WebFilter {
 
-    @Resource
-    private lateinit var template: StringRedisTemplate
+    override fun filter(exchange: ServerWebExchange, chain: WebFilterChain): Mono<Void> {
+        val address = exchange.request.remoteAddress?.address?.hostAddress ?: "unknown"
 
-    override fun doFilter(request: ServletRequest?, response: ServletResponse?, chain: FilterChain?) {
-        val address = request!!.remoteAddr
-        if (this.tryCount(address)) {
-            chain!!.doFilter(request, response)
-        } else {
-            this.writeBlockMessage(response!!)
+        return tryCount(address).flatMap { allowed ->
+            if (allowed) {
+                chain.filter(exchange)
+            } else {
+                writeBlockMessage(exchange)
+            }
         }
     }
 
-    private fun writeBlockMessage(response: ServletResponse) {
-        response.contentType = "application/json;charset=UTF-8"
-        response.writer.write(RestBean.forbidden("Too many requests").toJsonString())
+    private fun writeBlockMessage(exchange: ServerWebExchange): Mono<Void> {
+        val response = exchange.response
+        response.statusCode = HttpStatus.FORBIDDEN
+        response.headers.contentType = MediaType.APPLICATION_JSON
+        val buffer = response.bufferFactory()
+            .wrap(RestBean.forbidden("Too many requests").toJsonString().toByteArray())
+        return response.writeWith(Mono.just(buffer))
     }
 
-    private fun tryCount(ip: String): Boolean {
-        synchronized(ip.intern()) {
-            if (template.hasKey(Const.FLOW_LIMIT_BLOCK + ip)) return false
+    private fun tryCount(ip: String): Mono<Boolean> {
+        val blockKey = Const.FLOW_LIMIT_BLOCK + ip
+        val counterKey = Const.FLOW_LIMIT_COUNTER + ip
 
-            if (template.hasKey(Const.FLOW_LIMIT_COUNTER + ip)) {
-                val increment = template.opsForValue().increment(Const.FLOW_LIMIT_COUNTER + ip) ?: 0
-                if (increment > 10) {
-                    template.opsForValue().set(
-                        Const.FLOW_LIMIT_BLOCK + ip,
-                        "1",
-                        1,
-                        TimeUnit.MINUTES
-                    )
-                    return false
-                } else return true
-
+        return template.hasKey(blockKey).flatMap { isBlocked ->
+            if (isBlocked) {
+                Mono.just(false)
             } else {
-                template.opsForValue().set(
-                    Const.FLOW_LIMIT_COUNTER + ip,
-                    "1",
-                    3,
-                    TimeUnit.SECONDS
-                )
-                return true
+                template.hasKey(counterKey).flatMap { hasCounter ->
+                    if (hasCounter) {
+                        template.opsForValue().increment(counterKey).flatMap { count ->
+                            if (count != null && count > 10) {
+                                template.opsForValue()
+                                    .set(blockKey, "1", Duration.ofMinutes(1))
+                                    .thenReturn(false)
+                            } else {
+                                Mono.just(true)
+                            }
+                        }
+                    } else {
+                        template.opsForValue()
+                            .set(counterKey, "1", Duration.ofSeconds(3))
+                            .thenReturn(true)
+                    }
+                }
             }
         }
     }

@@ -1,4 +1,7 @@
 spring:
+  webflux:
+    base-path: /
+  
   mail:
     #host: smtp.example.com
     #username: 123456@example.com

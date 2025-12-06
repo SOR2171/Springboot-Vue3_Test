@@ -5,7 +5,7 @@ import com.baomidou.mybatisplus.annotation.TableId
 import com.baomidou.mybatisplus.annotation.TableName
 import com.github.sor2171.backend.entity.DataCopy
 import lombok.AllArgsConstructor
-import java.util.Date
+import java.util.*
 
 @TableName("account")
 @AllArgsConstructor

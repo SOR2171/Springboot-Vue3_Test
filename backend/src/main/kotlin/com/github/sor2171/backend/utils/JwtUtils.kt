@@ -3,9 +3,7 @@ package com.github.sor2171.backend.utils
 import com.auth0.jwt.JWT
 import com.auth0.jwt.JWTVerifier
 import com.auth0.jwt.algorithms.Algorithm
-import com.auth0.jwt.exceptions.SignatureVerificationException
 import com.auth0.jwt.interfaces.DecodedJWT
-import jakarta.annotation.Resource
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.data.redis.core.StringRedisTemplate
 import org.springframework.security.core.userdetails.User
@@ -17,16 +15,14 @@ import java.util.concurrent.TimeUnit
 @Component
 class JwtUtils(
     @param:Value("\${spring.security.jwt.key}")
-    val key: String,
+    private val key: String,
 
     @param:Value("\${spring.security.jwt.expire-hours}")
-    val expireHours: Int,
+    private val expireHours: Int,
 
-    @Resource
-    val template: StringRedisTemplate,
-
-    val algorithm: Algorithm = Algorithm.HMAC256(key),
-    val jwtVerifier: JWTVerifier = JWT.require(algorithm).build()
+    private val template: StringRedisTemplate,
+    private val algorithm: Algorithm = Algorithm.HMAC256(key),
+    private val jwtVerifier: JWTVerifier = JWT.require(algorithm).build()
 ) {
     fun invalidateJwt(headerToken: String?): Boolean {
         val token = this.convertToToken(headerToken) ?: return false
