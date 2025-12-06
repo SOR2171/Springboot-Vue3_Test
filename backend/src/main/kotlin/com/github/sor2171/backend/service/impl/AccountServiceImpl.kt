@@ -9,7 +9,6 @@ import com.github.sor2171.backend.mapper.AccountMapper
 import com.github.sor2171.backend.service.AccountService
 import com.github.sor2171.backend.utils.Const
 import com.github.sor2171.backend.utils.FlowUtils
-import jakarta.annotation.Resource
 import org.springframework.amqp.core.AmqpTemplate
 import org.springframework.data.redis.core.StringRedisTemplate
 import org.springframework.security.core.userdetails.User
@@ -17,22 +16,15 @@ import org.springframework.security.core.userdetails.UserDetails
 import org.springframework.security.core.userdetails.UsernameNotFoundException
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
-import java.util.Date
+import java.util.*
 import java.util.concurrent.TimeUnit
 
 @Service
 class AccountServiceImpl(
-    @Resource
-    val utils: FlowUtils,
-
-    @Resource
-    val amqpTemplate: AmqpTemplate,
-
-    @Resource
-    val stringRedisTemplate: StringRedisTemplate,
-
-    @Resource
-    val encoder: PasswordEncoder
+    private val utils: FlowUtils,
+    private val amqpTemplate: AmqpTemplate,
+    private val stringRedisTemplate: StringRedisTemplate,
+    private val encoder: PasswordEncoder
 
 ) : ServiceImpl<AccountMapper, Account>(), AccountService {
 

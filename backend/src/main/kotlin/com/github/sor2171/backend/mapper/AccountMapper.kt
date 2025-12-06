@@ -5,5 +5,4 @@ import com.github.sor2171.backend.entity.dto.Account
 import org.apache.ibatis.annotations.Mapper
 
 @Mapper
-interface AccountMapper : BaseMapper<Account> {
-}
+interface AccountMapper : BaseMapper<Account>

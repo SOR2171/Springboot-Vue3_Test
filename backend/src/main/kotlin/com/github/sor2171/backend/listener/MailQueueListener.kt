@@ -1,6 +1,5 @@
 package com.github.sor2171.backend.listener
 
-import jakarta.annotation.Resource
 import org.springframework.amqp.rabbit.annotation.RabbitHandler
 import org.springframework.amqp.rabbit.annotation.RabbitListener
 import org.springframework.beans.factory.annotation.Value
@@ -12,10 +11,9 @@ import org.springframework.stereotype.Component
 @RabbitListener(queues = ["mail"])
 class MailQueueListener(
     @param:Value("\${spring.mail.username}")
-    val username: String,
+    private val username: String,
 
-    @Resource
-    val sender: MailSender
+    private val sender: MailSender
 ) {
     @RabbitHandler
     fun senderMailMessage(data: Map<String, String>) {
@@ -29,12 +27,14 @@ class MailQueueListener(
                         + "\nThis code is valid for 3 minutes.",
                 email
             )
+
             "reset" -> createMailMessage(
                 "Password Reset Request",
                 "You requested a password reset. Your verification code is: $code"
                         + "\nThis code is valid for 3 minutes.",
                 email
             )
+
             else -> return
         }
         sender.send(message)

@@ -6,8 +6,8 @@ import jakarta.servlet.http.HttpFilter
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 import org.springframework.core.annotation.Order
-import org.springframework.stereotype.Component
 import org.springframework.http.HttpHeaders
+import org.springframework.stereotype.Component
 
 @Component
 @Order(Const.CORS_ORDER)
@@ -20,11 +20,11 @@ class CorsFilter : HttpFilter() {
         this.addCorsHeader(request, response)
         chain?.doFilter(request, response)
     }
-    
+
     private fun addCorsHeader(
         request: HttpServletRequest?,
         response: HttpServletResponse?
-        ) {
+    ) {
         response?.addHeader(
             HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN,
             request?.getHeader(HttpHeaders.ORIGIN)

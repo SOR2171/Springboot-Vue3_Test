@@ -9,12 +9,9 @@ data class RestBean<T>(
     val message: String
 ) {
     companion object {
-        fun <T> success(data: T, message: String = "Success"): RestBean<T> {
+        fun success(data: Any? = null, message: String = "Success"): RestBean<Any?> {
             return RestBean(200, data, message)
         }
-
-        fun success(): RestBean<String?> =
-            success(null)
 
         fun <T> failure(code: Int = 401, data: T, message: String?): RestBean<T> {
             return RestBean(code, data, message ?: "Failure")
@@ -26,7 +23,7 @@ data class RestBean<T>(
         fun forbidden(message: String?) =
             failure(403, null, message)
 
-        fun logoutFailed(message: String = ""): RestBean<String?> {
+        fun logoutFailed(message: String = ""): RestBean<Any?> {
             val formatMessage = if (message.isBlank()) "" else ": $message"
             return failure(400, null, "Logout Failed$formatMessage")
         }

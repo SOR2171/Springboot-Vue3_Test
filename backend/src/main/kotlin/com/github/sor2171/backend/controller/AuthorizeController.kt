@@ -4,7 +4,6 @@ import com.github.sor2171.backend.entity.RestBean
 import com.github.sor2171.backend.entity.vo.request.EmailRegisterVO
 import com.github.sor2171.backend.entity.vo.request.PasswordResetVO
 import com.github.sor2171.backend.service.AccountService
-import jakarta.annotation.Resource
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.validation.Valid
 import jakarta.validation.constraints.Email
@@ -17,8 +16,7 @@ import org.springframework.web.bind.annotation.*
 @RestController
 @RequestMapping("/api/auth")
 class AuthorizeController(
-    @Resource
-    val service: AccountService
+    private   val service: AccountService
 ) {
 
     @GetMapping("/ask-code")
@@ -26,7 +24,7 @@ class AuthorizeController(
         @RequestParam @NotBlank @Email email: String,
         @RequestParam @Pattern(regexp = "(register|reset)") type: String,
         request: HttpServletRequest
-    ): RestBean<out String?> {
+    ): RestBean<Any?> {
         return this.messageHandler(
             service.askEmailVerifyCode(
                 type,
@@ -37,16 +35,16 @@ class AuthorizeController(
     }
 
     @PostMapping("/register")
-    fun emailRegister(@RequestBody @Valid vo: EmailRegisterVO): RestBean<out String?> {
+    fun emailRegister(@RequestBody @Valid vo: EmailRegisterVO): RestBean<Any?> {
         return this.messageHandler(service.registerEmailAccount(vo))
     }
 
     @PostMapping("/reset")
-    fun emailResetPassword(@RequestBody @Valid vo: PasswordResetVO): RestBean<out String?> {
+    fun emailResetPassword(@RequestBody @Valid vo: PasswordResetVO): RestBean<Any?> {
         return this.messageHandler(service.resetEmailAccountPassword(vo))
     }
 
-    fun messageHandler(wrongMessage: String): RestBean<out String?> {
+    fun messageHandler(wrongMessage: String): RestBean<Any?> {
         return if (wrongMessage.isBlank()) {
             RestBean.success()
         } else {

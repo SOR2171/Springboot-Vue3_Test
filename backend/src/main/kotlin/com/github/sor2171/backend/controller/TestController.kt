@@ -7,7 +7,7 @@ import org.springframework.web.bind.annotation.RestController
 @RestController
 @RequestMapping("/api/test")
 class TestController {
-    
+
     @GetMapping("/hello")
     fun test() = "Hello Kotlin Springboot!"
 }

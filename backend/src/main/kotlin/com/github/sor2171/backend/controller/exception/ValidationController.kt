@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice
 class ValidationController {
 
     private val log = LoggerFactory.getLogger(ValidationController::class.java)
-    
+
     @ExceptionHandler(ValidationException::class)
     fun validationException(e: Exception): RestBean<out String?> {
         log.warn("Resolve [${e.javaClass.name}: ${e.message}]")

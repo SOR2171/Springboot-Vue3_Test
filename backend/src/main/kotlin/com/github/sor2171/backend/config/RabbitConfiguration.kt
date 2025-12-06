@@ -14,7 +14,7 @@ import org.springframework.context.annotation.Configuration
 class RabbitConfiguration {
     @Bean
     fun jsonMessageConverter(): MessageConverter = Jackson2JsonMessageConverter()
-    
+
 
     @Bean
     fun rabbitTemplate(

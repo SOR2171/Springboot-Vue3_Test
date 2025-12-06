@@ -2,7 +2,6 @@ package com.github.sor2171.backend.filter
 
 import com.github.sor2171.backend.entity.RestBean
 import com.github.sor2171.backend.utils.Const
-import jakarta.annotation.Resource
 import jakarta.servlet.FilterChain
 import jakarta.servlet.ServletRequest
 import jakarta.servlet.ServletResponse
@@ -14,10 +13,9 @@ import java.util.concurrent.TimeUnit
 
 @Component
 @Order(Const.FLOW_LIMIT_ORDER)
-class FlowLimitFilter : HttpFilter() {
-
-    @Resource
-    private lateinit var template: StringRedisTemplate
+class FlowLimitFilter(
+    private val template: StringRedisTemplate
+) : HttpFilter() {
 
     override fun doFilter(request: ServletRequest?, response: ServletResponse?, chain: FilterChain?) {
         val address = request!!.remoteAddr
