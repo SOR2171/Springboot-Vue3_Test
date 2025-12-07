@@ -90,7 +90,11 @@ java -jar build/libs/backend-(ver).jar
 cd frontend
 ```
 
-2. Build
+2. prepare some picture
+
+you need a `frontend/src/assets/welcome-image.png`, which is the background of welcome page.
+
+3. Build
 
 ```bash
 npm install

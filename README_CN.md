@@ -93,7 +93,11 @@ java -jar build/libs/backend-(ver).jar
 cd frontend
 ```
 
-2. 构建前端
+2.  准备一些图片
+
+你需要一张 `frontend/src/assets/welcome-image.png` 用作登陆界面的背景
+
+3. 构建前端
 
 ```bash
 npm install

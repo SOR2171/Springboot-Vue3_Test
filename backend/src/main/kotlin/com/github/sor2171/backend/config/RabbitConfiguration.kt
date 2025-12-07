@@ -9,13 +9,11 @@ import org.springframework.boot.autoconfigure.amqp.SimpleRabbitListenerContainer
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 
-
 @Configuration
 class RabbitConfiguration {
     @Bean
     fun jsonMessageConverter(): MessageConverter = Jackson2JsonMessageConverter()
-
-
+    
     @Bean
     fun rabbitTemplate(
         connectionFactory: ConnectionFactory,
